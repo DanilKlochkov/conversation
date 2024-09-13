@@ -1,7 +1,9 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
-import math
+import seaborn as sns
+import matplotlib.pyplot as plt
+import streamlit as st 
 
 from regression import Linear_Regression
 
@@ -24,7 +26,7 @@ $\\frac{\delta S}{\delta a}=-2\sum_{i=1}^N (y_i - a - bx_i), \\frac{\delta S}{\d
 
 Которые затем при раскрытии дадут нам коэфф. A и свободный член B.
 
-<img src="https://habrastorage.org/getpro/habr/formulas/619/045/430/6190454309335916fd198bbfb394a29d.svg">
+$\\begin{aligned} & \hat{a}=\langle y\\rangle-\hat{b}\langle x\\rangle \\ & \hat{b}=\\frac{\langle x y \\rangle -\langle x\\rangle \langle y\\rangle}{\left\langle x^2\\right\\rangle-\langle x \\rangle^2}\end{aligned}$
 
 """)
 
@@ -96,6 +98,26 @@ st.dataframe(table)
 st.markdown(f"Коэффициент A: {lr.a}")
 st.markdown(f"Свободный член B: {lr.b}")
 
+fig = plt.figure(figsize=(10, 4))
+plt.title("Конверсия пользователей")
+plt.plot(views, lr.a*views+lr.b, label="Линейная регрессия")
+plt.scatter(views, regs, color="red", label="Исходные данные")
+plt.xlabel('views', size=13)
+plt.ylabel('regs', size=13)
+plt.legend()
+
+st.pyplot(fig)
+
 st.markdown("#### Предсказание количества просмотров:")
-predict_number = st.slider("Количество просмотров: ", 1, 10000)
+predict_number = st.slider("Количество просмотров: ", 20, 10000, 1000)
 st.markdown(f"Количество регистраций: Y = {lr.predict(np.array([int(predict_number)]))[0]}")
+
+fig2 = plt.figure(figsize=(10, 4))
+plt.plot(views, lr.a*views+lr.b, label="Линейная регрессия")
+plt.scatter(np.array([int(predict_number)]), lr.predict(np.array([int(predict_number)])), color="green", label="Предсказываемое количество регистраций")
+plt.scatter(views, regs, color="red", label="Исходные данные")
+plt.xlabel('views', size=13)
+plt.ylabel('regs', size=13)
+plt.legend()
+
+st.pyplot(fig2)

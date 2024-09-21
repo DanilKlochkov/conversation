@@ -4,13 +4,30 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import streamlit as st 
 
-from regression import Linear_Regression
+from sklearn.datasets import make_regression
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression, Ridge, Lasso, ElasticNet
+from sklearn.metrics import mean_squared_error, mean_absolute_error
+
 
 t = np.linspace(1, 10, num=10)
 views = np.array([5252, 7620, 941, 1159, 485, 299, 239, 195, 181, 180])
 regs = np.array([21, 46, 9, 8, 3, 6, 4, 2, 2, 2])
-lr = Linear_Regression(views, regs)
-lr.fit()
+
+X3, y3 = make_regression(n_samples=14, n_features=1, noise=2, random_state=0)
+X3_train, X3_test, y3_train, y3_test = train_test_split(X3, y3, random_state=0)
+
+lr = LinearRegression()
+lr.fit(X3_train, y3_train)
+
+lasso = Lasso()
+lasso.fit(X3_train, y3_train)
+
+ridge = Ridge()
+ridge.fit(X3_train, y3_train)
+
+elnet = ElasticNet()
+elnet.fit(X3_train, y3_train)
 
 st.title("Конверсия пользователей")
 st.markdown("""
@@ -29,94 +46,37 @@ $\\begin{aligned} & \hat{a}=\langle y\\rangle-\hat{b}\langle x\\rangle \\ & \hat
 
 """)
 
-col1, col2 = st.columns(2)
 
-with col1:
-    tab1, tab2, tab3 = st.tabs(["Среднее значение", "Дисперсия", "Корреляция"])
+tab1, tab2, tab3 = st.tabs(["ElasticNet", "Lasso", "Ridge"])
 
-    with tab1:
-        formula, python = st.tabs(["Формула", "Python"])
-        formula.markdown("$m(x)=\\frac{1}{N}*\sum_{i=0}^{N-1} x_i$")
-        python.code("""
-            def m(X):
-                return sum(X)/len(X)
-        """)
+with tab1:
+    st.markdown("Линейная регрессия с L1 и L2 регуляризаторами")
+    st.markdown("Минимизация целевой функции: $\\frac{1}{2N}*||Xw - y||^2_2 + \\alpha\\rho * ||w||_1 + \\frac{\\alpha(1-\\rho)}{2} * ||w||^2_2$")
+    st.markdown("$\\alpha$ - коэффициэнт регуляризации, $\\rho$ - параметр управляющий соотношением между L1 и L2, $||w||_1$ - норма L1 (сумма абсолютных значений), $||w||^2_2$ - норма L2 (сумма квадратов)")
+    
+with tab2:
+    st.markdown("Lasso - модель, оценивающая разреженные коэффициенты. Предпочитает решения с меньшим количеством ненулевых коэффициентов")
+    st.markdown("Минимизация целевой функции: $\\frac{1}{2N}*||Xw - y||^2_2 + \\alpha * ||w||_1$")
 
-    with tab2:
-        formula, python = st.tabs(["Формула", "Python"])
-        formula.markdown("$D(x)=\\frac{1}{N}*\sum_{i=0}^{N-1}(x_i-m(x))^2$")
-        python.code("""
-            def d(X):
-                return m(X**2) - (m(X))**2
-        """)
-
-    with tab3:
-        formula, python = st.tabs(["Формула", "Python"])
-        formula.markdown("$\\frac{1}{N}*\\frac{\sum_{i=0}^{N-1}(x_i-m(x))(z_i-m(z))}{\sqrt{D(x)*D(z)}}$")
-        python.code("""
-            def correlation(X, Y):
-                return sum((X - m(X)) * (Y - m(Y))) / (len(X) * (d(X) * d(Y)) ** 0.5)
-        """)
-
-with col2:
-    st.code(
-    """
-    class Linear_Regression:
-    def __init__(self, X, Y):
-        self.x = X
-        self.y = Y
-
-    def m(self, X):
-        return sum(X)/len(X)
-
-    def d(self, X):
-        return self.m(X**2) - (self.m(X))**2
-
-    def correlation(self, X, Y):
-        return sum((X - self.m(X)) * (Y - self.m(Y))) / (len(X) * (self.d(X) * self.d(Y)) ** 0.5)
-
-    def fit(self):
-        self.a = (self.m(self.y)*self.m(self.x)-(self.m(self.y*self.x)))/(self.m(self.x)**2-self.m(self.x**2))
-        self.b = self.m(self.y)-self.a*self.m(self.x)
-
-    def predict(self, X):
-        return self.a*X + self.b
-    """
-    )
-
-st.markdown("#### Сравнение работы :red[написанных] и :blue[встроенных] функций")
+with tab3:
+    st.markdown("Ridge - модель, добавляет L2-регуляризацию к функции стоимости и больше всего снижает веса для признаков с высокой корреляцией")
+    st.markdown("Минимизация целевой функции: $||Xw - y||^2_2 + \\alpha * ||w||^2_2$")
 
 table = pd.DataFrame(
-    [["M(x)", lr.m(views), np.mean(views), abs(lr.m(views) - np.mean(views))],
-     ["D(x)", lr.d(views), np.var(views), abs(lr.d(views) - np.var(views))],
-     ["Регрессия", lr.correlation(views, regs), np.corrcoef(views, regs)[0][1], abs(np.corrcoef(views, regs)[0][1] - lr.correlation(views, regs))]],
-     columns=['Функция', 'Собственная', 'NumPy', 'Разница']
+    [["MSE", mean_squared_error(y3_test, lasso.predict(X3_test)), mean_squared_error(y3_test, ridge.predict(X3_test)), mean_squared_error(y3_test, elnet.predict(X3_test))],
+     ["MAE", mean_absolute_error(y3_test, lasso.predict(X3_test)), mean_absolute_error(y3_test, ridge.predict(X3_test)), mean_absolute_error(y3_test, elnet.predict(X3_test))]],
+     columns=['Ошибка', 'Lasso', 'Ridge', 'ElasticNet']
 )
 st.dataframe(table)
 
-st.markdown(f"Коэффициент A: {lr.a}")
-st.markdown(f"Свободный член B: {lr.b}")
-
-fig = plt.figure(figsize=(10, 4))
-plt.title("Конверсия пользователей")
-plt.plot(views, lr.a*views+lr.b, label="Линейная регрессия")
-plt.scatter(views, regs, color="red", label="Исходные данные")
-plt.xlabel('views', size=13)
-plt.ylabel('regs', size=13)
-plt.legend()
-
-st.pyplot(fig)
-
-st.markdown("#### Предсказание количества просмотров:")
-predict_number = st.slider("Количество просмотров: ", 20, 10000, 1000)
-st.markdown(f"Количество регистраций: Y = {lr.predict(np.array([int(predict_number)]))[0]}")
-
 fig2 = plt.figure(figsize=(10, 4))
-plt.plot(views, lr.a*views+lr.b, label="Линейная регрессия")
-plt.scatter(np.array([int(predict_number)]), lr.predict(np.array([int(predict_number)])), color="green", label="Предсказываемое количество регистраций")
-plt.scatter(views, regs, color="red", label="Исходные данные")
-plt.xlabel('views', size=13)
-plt.ylabel('regs', size=13)
+plt.plot(X3, lr.predict(X3), label="Линейная регрессия")
+plt.plot(X3, lasso.predict(X3), label="Лассо")
+plt.plot(X3, ridge.predict(X3), label="Ridge")
+plt.plot(X3, elnet.predict(X3), label="ElasticNet")
+plt.scatter(X3, y3, color="red", label="Исходные данные")
+plt.xlabel('X', size=13)
+plt.ylabel('Y', size=13)
 plt.legend()
 
 st.pyplot(fig2)
